@@ -1,153 +1,181 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <title>ShootCraft MVP</title>
+<meta charset="UTF-8">
+<title>ShootCraft MVP 2</title>
 
-    <style>
-        html, body {
-            width: 100%;
-            height: 100%;
-            margin: 0;
-            overflow: hidden;
-        }
+<style>
+html, body {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+}
 
-        #renderCanvas {
-            width: 100%;
-            height: 100%;
-            touch-action: none;
-            display: block;
-        }
+#renderCanvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+    touch-action: none;
+}
 
-        #info {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            color: white;
-            font-family: Arial;
-            background: rgba(0,0,0,0.5);
-            padding: 10px;
-            z-index: 100;
-        }
-    </style>
+#info {
+    position: absolute;
+    left: 10px;
+    top: 10px;
+    color: white;
+    background: rgba(0,0,0,0.5);
+    padding: 10px;
+    font-family: Arial;
+    z-index: 100;
+}
+</style>
+
 </head>
 <body>
 
 <div id="info">
-    WASD - движение<br>
-    Пробел - вверх<br>
-    Shift - вниз<br>
-    Клик по экрану - захват мыши
+WASD - движение<br>
+Space - прыжок<br>
+Клик мышью - захват камеры
 </div>
 
 <canvas id="renderCanvas"></canvas>
 
-<!-- script src="https://cdn.babylonjs.com/babylon.js"></script -->
 <script src="babylon.js"></script>
 
 <script>
+
 const canvas = document.getElementById("renderCanvas");
 
 const engine = new BABYLON.Engine(canvas, true);
 
-const createScene = () => {
+const scene = new BABYLON.Scene(engine);
 
-    const scene = new BABYLON.Scene(engine);
+scene.gravity = new BABYLON.Vector3(0, -0.5, 0);
+scene.collisionsEnabled = true;
 
-    scene.clearColor = new BABYLON.Color4(
-        0.53,
-        0.81,
-        0.92,
-        1
-    );
+scene.clearColor = new BABYLON.Color4(
+    0.53,
+    0.81,
+    0.92,
+    1
+);
 
-    const camera = new BABYLON.UniversalCamera(
-        "camera",
-        new BABYLON.Vector3(0, 2, -10),
+const light = new BABYLON.HemisphericLight(
+    "light",
+    new BABYLON.Vector3(0, 1, 0),
+    scene
+);
+
+const camera = new BABYLON.UniversalCamera(
+    "camera",
+    new BABYLON.Vector3(0, 5, -10),
+    scene
+);
+
+camera.attachControl(canvas, true);
+
+camera.speed = 0.4;
+
+camera.applyGravity = true;
+camera.checkCollisions = true;
+
+camera.ellipsoid = new BABYLON.Vector3(
+    0.8,
+    1.8,
+    0.8
+);
+
+camera.keysUp.push(87);
+camera.keysDown.push(83);
+camera.keysLeft.push(65);
+camera.keysRight.push(68);
+
+const ground = BABYLON.MeshBuilder.CreateGround(
+    "ground",
+    {
+        width: 100,
+        height: 100
+    },
+    scene
+);
+
+ground.checkCollisions = true;
+
+const groundMaterial =
+    new BABYLON.StandardMaterial(
+        "groundMaterial",
         scene
     );
 
-    camera.attachControl(canvas, true);
-
-    camera.speed = 0.4;
-
-    camera.keysUp.push(87);
-    camera.keysDown.push(83);
-    camera.keysLeft.push(65);
-    camera.keysRight.push(68);
-
-    const light = new BABYLON.HemisphericLight(
-        "light",
-        new BABYLON.Vector3(0, 1, 0),
-        scene
+groundMaterial.diffuseColor =
+    new BABYLON.Color3(
+        0.2,
+        0.8,
+        0.2
     );
 
-    light.intensity = 1.0;
+ground.material = groundMaterial;
 
-    const ground = BABYLON.MeshBuilder.CreateGround(
-        "ground",
-        {
-            width: 100,
-            height: 100
-        },
-        scene
-    );
+function createBlock(x, y, z) {
 
-    const groundMaterial =
-        new BABYLON.StandardMaterial(
-            "groundMaterial",
+    const block =
+        BABYLON.MeshBuilder.CreateBox(
+            "block",
+            {
+                size: 2
+            },
             scene
         );
 
-    groundMaterial.diffuseColor =
-        new BABYLON.Color3(
-            0.2,
-            0.8,
-            0.2
+    block.position =
+        new BABYLON.Vector3(
+            x,
+            y,
+            z
         );
 
-    ground.material = groundMaterial;
+    block.checkCollisions = true;
 
-    for (let x = -5; x <= 5; x++) {
+    return block;
+}
 
-        for (let z = -5; z <= 5; z++) {
+createBlock(0, 1, 0);
+createBlock(3, 1, 0);
+createBlock(6, 1, 0);
 
-            if (Math.random() > 0.7) {
+createBlock(0, 1, 6);
+createBlock(3, 1, 6);
+createBlock(6, 1, 6);
 
-                const block =
-                    BABYLON.MeshBuilder.CreateBox(
-                        "block",
-                        {
-                            size: 2
-                        },
-                        scene
-                    );
+createBlock(0, 1, 3);
+createBlock(6, 1, 3);
 
-                block.position =
-                    new BABYLON.Vector3(
-                        x * 3,
-                        1,
-                        z * 3
-                    );
-            }
-        }
+let canJump = true;
+
+window.addEventListener("keydown", (event) => {
+
+    if (event.code === "Space" && canJump) {
+
+        camera.cameraDirection.y += 0.8;
+
+        canJump = false;
+
+        setTimeout(() => {
+            canJump = true;
+        }, 600);
     }
-
-    return scene;
-};
-
-const scene = createScene();
+});
 
 engine.runRenderLoop(() => {
     scene.render();
 });
 
-window.addEventListener(
-    "resize",
-    () => {
-        engine.resize();
-    }
-);
+window.addEventListener("resize", () => {
+    engine.resize();
+});
+
 </script>
 
 </body>
