@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<title>ShootCraft Stable FIX</title>
+<title>ShootCraft Stable Hybrid</title>
 
 <style>
 html, body {
@@ -28,7 +28,7 @@ html, body {
     margin-top: -5px;
     border: 2px solid white;
     border-radius: 50%;
-    z-index: 10;
+    pointer-events: none;
 }
 </style>
 </head>
@@ -46,14 +46,14 @@ const canvas = document.getElementById("renderCanvas");
 const engine = new BABYLON.Engine(canvas, true);
 const scene = new BABYLON.Scene(engine);
 
-// свет (ВАЖНО)
-const light = new BABYLON.HemisphericLight(
+// ===== LIGHT =====
+new BABYLON.HemisphericLight(
     "light",
     new BABYLON.Vector3(0, 1, 0),
     scene
 );
 
-// камера
+// ===== CAMERA =====
 const camera = new BABYLON.UniversalCamera(
     "camera",
     new BABYLON.Vector3(0, 5, -10),
@@ -63,49 +63,61 @@ const camera = new BABYLON.UniversalCamera(
 camera.attachControl(canvas, true);
 camera.speed = 0.4;
 
+// WASD
 camera.keysUp.push(87);
 camera.keysDown.push(83);
 camera.keysLeft.push(65);
 camera.keysRight.push(68);
 
-// ===== ЗЕМЛЯ (ВОЗВРАЩАЕМ) =====
+// ВКЛЮЧАЕМ КОЛЛИЗИИ (XZ)
+scene.collisionsEnabled = true;
+camera.checkCollisions = true;
+camera.ellipsoid = new BABYLON.Vector3(0.8, 1.8, 0.8);
+
+// ===== GROUND =====
 const ground = BABYLON.MeshBuilder.CreateGround("ground", {
     width: 50,
     height: 50
 }, scene);
 
-const groundMat = new BABYLON.StandardMaterial("gmat", scene);
-groundMat.diffuseColor = new BABYLON.Color3(0.2, 0.8, 0.2);
-ground.material = groundMat;
+const gmat = new BABYLON.StandardMaterial("gmat", scene);
+gmat.diffuseColor = new BABYLON.Color3(0.2, 0.8, 0.2);
+ground.material = gmat;
 
-// ===== БЛОКИ =====
+ground.checkCollisions = true;
+
+// ===== BLOCKS =====
 function createBlock(x, y, z) {
     const b = BABYLON.MeshBuilder.CreateBox("block", { size: 2 }, scene);
 
-    const mat = new BABYLON.StandardMaterial("bm", scene);
-    mat.diffuseColor = new BABYLON.Color3(0.6, 0.4, 0.2);
-    b.material = mat;
+    const m = new BABYLON.StandardMaterial("bm", scene);
+    m.diffuseColor = new BABYLON.Color3(0.6, 0.4, 0.2);
+    b.material = m;
 
     b.position.set(x, y, z);
+
+    b.checkCollisions = true;
+
     return b;
 }
 
-// фиксированная сцена (НЕ voxel пока)
+// мир
 for (let x = -3; x <= 3; x++) {
-    for (let z = -3; z <= 3; z++) {
-        if (Math.random() > 0.6) {
-            createBlock(x * 2, 1, z * 2);
-        }
+for (let z = -3; z <= 3; z++) {
+    if (Math.random() > 0.6) {
+        createBlock(x * 2, 1, z * 2);
     }
 }
+}
 
-// ===== ФИЗИКА =====
+// ===== Y PHYSICS (прыжок) =====
 let velocityY = 0;
 const gravity = -0.03;
-const groundY = 2;
+const groundY = 5;
 
 let canJump = true;
 
+// прыжок
 window.addEventListener("keydown", (e) => {
     if (e.code === "Space" && canJump) {
         velocityY = 0.5;
@@ -117,6 +129,7 @@ window.addEventListener("keydown", (e) => {
 // ===== LOOP =====
 engine.runRenderLoop(() => {
 
+    // Y движение отдельно (НЕ конфликтует с Babylon)
     velocityY += gravity;
     camera.position.y += velocityY;
 
