@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<title>ShootCraft MVP 3</title>
+<title>ShootCraft Stable FIX</title>
 
 <style>
 html, body {
@@ -16,7 +16,6 @@ html, body {
     width: 100%;
     height: 100%;
     display: block;
-    touch-action: none;
 }
 
 #crosshair {
@@ -31,32 +30,12 @@ html, body {
     border-radius: 50%;
     z-index: 10;
 }
-
-#info {
-    position: absolute;
-    top: 10px;
-    left: 10px;
-    color: white;
-    background: rgba(0,0,0,0.5);
-    padding: 10px;
-    font-family: Arial;
-    z-index: 10;
-}
 </style>
-
 </head>
 
 <body>
 
 <div id="crosshair"></div>
-
-<div id="info">
-WASD - движение<br>
-Space - прыжок<br>
-ЛКМ - удалить блок<br>
-ПКМ - поставить блок
-</div>
-
 <canvas id="renderCanvas"></canvas>
 
 <script src="babylon.js"></script>
@@ -67,7 +46,14 @@ const canvas = document.getElementById("renderCanvas");
 const engine = new BABYLON.Engine(canvas, true);
 const scene = new BABYLON.Scene(engine);
 
-// камера и физика
+// свет (ВАЖНО)
+const light = new BABYLON.HemisphericLight(
+    "light",
+    new BABYLON.Vector3(0, 1, 0),
+    scene
+);
+
+// камера
 const camera = new BABYLON.UniversalCamera(
     "camera",
     new BABYLON.Vector3(0, 5, -10),
@@ -82,51 +68,44 @@ camera.keysDown.push(83);
 camera.keysLeft.push(65);
 camera.keysRight.push(68);
 
-// свет
-const light = new BABYLON.HemisphericLight(
-    "light",
-    new BABYLON.Vector3(0, 1, 0),
-    scene
-);
-
-// земля
+// ===== ЗЕМЛЯ (ВОЗВРАЩАЕМ) =====
 const ground = BABYLON.MeshBuilder.CreateGround("ground", {
-    width: 100,
-    height: 100
+    width: 50,
+    height: 50
 }, scene);
 
-ground.checkCollisions = true;
+const groundMat = new BABYLON.StandardMaterial("gmat", scene);
+groundMat.diffuseColor = new BABYLON.Color3(0.2, 0.8, 0.2);
+ground.material = groundMat;
 
-// блоки
-const blocks = [];
-
+// ===== БЛОКИ =====
 function createBlock(x, y, z) {
-    const block = BABYLON.MeshBuilder.CreateBox("block", { size: 2 }, scene);
-    block.position = new BABYLON.Vector3(x, y, z);
-    block.checkCollisions = true;
-    blocks.push(block);
-    return block;
+    const b = BABYLON.MeshBuilder.CreateBox("block", { size: 2 }, scene);
+
+    const mat = new BABYLON.StandardMaterial("bm", scene);
+    mat.diffuseColor = new BABYLON.Color3(0.6, 0.4, 0.2);
+    b.material = mat;
+
+    b.position.set(x, y, z);
+    return b;
 }
 
-// фиксированная карта
-createBlock(0, 1, 0);
-createBlock(3, 1, 0);
-createBlock(6, 1, 0);
-createBlock(0, 1, 3);
-createBlock(3, 1, 3);
-createBlock(6, 1, 3);
-createBlock(0, 1, 6);
-createBlock(3, 1, 6);
-createBlock(6, 1, 6);
+// фиксированная сцена (НЕ voxel пока)
+for (let x = -3; x <= 3; x++) {
+    for (let z = -3; z <= 3; z++) {
+        if (Math.random() > 0.6) {
+            createBlock(x * 2, 1, z * 2);
+        }
+    }
+}
 
-// прыжок + гравитация
+// ===== ФИЗИКА =====
 let velocityY = 0;
 const gravity = -0.03;
 const groundY = 2;
 
 let canJump = true;
 
-// прыжок
 window.addEventListener("keydown", (e) => {
     if (e.code === "Space" && canJump) {
         velocityY = 0.5;
@@ -135,41 +114,7 @@ window.addEventListener("keydown", (e) => {
     }
 });
 
-// raycast
-function getPickedBlock() {
-    const ray = camera.getForwardRay();
-    return scene.pickWithRay(ray, (mesh) => blocks.includes(mesh));
-}
-
-// ЛКМ / ПКМ
-window.addEventListener("mousedown", (e) => {
-
-    const pick = getPickedBlock();
-
-    if (e.button === 0) { // ЛКМ
-        if (pick.hit && pick.pickedMesh) {
-            pick.pickedMesh.dispose();
-            const index = blocks.indexOf(pick.pickedMesh);
-            if (index !== -1) blocks.splice(index, 1);
-        }
-    }
-
-    if (e.button === 2) { // ПКМ
-        const pickPoint = pick.pickedPoint;
-        if (pickPoint) {
-            createBlock(
-                Math.round(pickPoint.x),
-                Math.round(pickPoint.y),
-                Math.round(pickPoint.z)
-            );
-        }
-    }
-});
-
-// отключаем контекстное меню ПКМ
-window.addEventListener("contextmenu", (e) => e.preventDefault());
-
-// loop
+// ===== LOOP =====
 engine.runRenderLoop(() => {
 
     velocityY += gravity;
