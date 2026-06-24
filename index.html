@@ -153,15 +153,17 @@ createBlock(0, 1, 3);
 createBlock(6, 1, 3);
 
 let canJump = true;
+let velocityY = 0;
+const gravity = -0.03;
+const playerGroundY = 2;
 
 window.addEventListener("keydown", (event) => {
 
     if (event.code === "Space" && canJump) {
 
-        camera.cameraDirection.y += 0.8;
-
+        //camera.cameraDirection.y += 0.8;
+        velocityY = 0.45;
         canJump = false;
-
         setTimeout(() => {
             canJump = true;
         }, 600);
@@ -169,6 +171,12 @@ window.addEventListener("keydown", (event) => {
 });
 
 engine.runRenderLoop(() => {
+    velocityY += gravity;
+    camera.position.y += velocityY;
+    if (camera.position.y < playerGroundY) {
+        camera.position.y = playerGroundY;
+        velocityY = 0;
+    }
     scene.render();
 });
 
